@@ -1,0 +1,7 @@
+all:
+	gcc -o main main.c funcClient.c model/connection.c
+client:
+	./main
+clean:
+	rm main
+	

@@ -59,3 +59,34 @@ int ftp_tokenizer(char* str, char*** arr_token, char tok, int max_arr_token) {
 
     return j;
 }
+
+int ftp_file_exist(char *path, char *errmsg) {
+    int status;
+    struct stat st;
+
+    status = stat(path, &st);
+    if(status == -1) {
+        sprintf(errmsg, "File %s doesn't exist or permission denied\n", path);
+        return -1;
+    }
+    if(S_ISDIR(st.st_mode)) {
+        sprintf(errmsg, "%s is not a file\n", path);
+        return -1;
+    }
+
+    return 0;
+}
+
+void ftp_read_send_file_chunked(char *path, int socket_fd) {
+    /* TODO */
+}
+
+void ftp_get_filename_from_path(char *path, char *filename) {
+    int x;
+    char** splitted;
+
+    x = ftp_tokenizer(path, &splitted, '/', 100);
+    strcpy(filename, splitted[x - 1]);
+
+    free(splitted);
+}

@@ -71,6 +71,24 @@ static int ftpc_sendsrvmsg(const char *msg,
     return 0;
 }
 
+static int ftpc_retrieve(char *path) {
+    if(fc.connect_status == DISCONNECTED) {
+        printf("| ERROR! No active CONNECTION\n");
+        return ST_ERROR;
+    }
+    /* TODO */
+    return ST_RETR;
+}
+
+static int ftpc_store(char *path) {
+    if(fc.connect_status == DISCONNECTED) {
+        printf("| ERROR! No active CONNECTION\n");
+        return ST_ERROR;
+    }
+    /* TODO */
+    return ST_STOR;
+}
+
 static int ftpc_quit() {
     if(fc.connect_status == DISCONNECTED) {
         printf("| ERROR! No active CONNECTION\n");
@@ -120,7 +138,7 @@ static int ftpc_list(char *path) {
     return ST_LIST;
 }
 
-static int ftp_cd(char* path) {
+static int ftpc_cd(char* path) {
     if(chdir(path) == -1) {
         printf("| ERROR while changing directory to %s\n", path);
         return ST_ERROR;
@@ -130,7 +148,7 @@ static int ftp_cd(char* path) {
     return ST_CD;
 }
 
-static int ftp_cwd(char* path) {
+static int ftpc_cwd(char* path) {
     if(fc.connect_status == DISCONNECTED) {
         printf("| ERROR! No active CONNECTION\n");
         return ST_ERROR;
@@ -157,6 +175,58 @@ static int ftp_cwd(char* path) {
 }
 
 static void ftpc_parse_command(char *command, int *loop_status) {
+    char** arr_cmd;
+    int arr_cmd_len;
+
+    arr_cmd_len = ftp_tokenizer(command, &arr_cmd, ' ', 10);
+
+    if(!strcmp(arr_cmd[0], CMD_CONN)) {
+        if(arr_cmd_len == 2) {
+            ftpc_connect(arr_cmd[1]);
+        } else {
+            printf("| Argument not valid\n| CONN <ip-address>\n");
+        }
+    } else if(!strcmp(arr_cmd[0], CMD_QUIT)) {
+        ftpc_quit();
+    } else if(!strcmp(arr_cmd[0], CMD_RETR)) {
+        if(arr_cmd_len == 2) {
+            ftpc_retrieve(arr_cmd[1]);
+        } else {
+            printf("| Argument not valid\n| RETR <file-path>\n");
+        }
+    } else if(!strcmp(arr_cmd[0], CMD_STOR)) {
+        if(arr_cmd_len == 2) {
+            ftpc_store(arr_cmd[1]);
+        } else {
+            printf("| Argument not valid\n| STOR <file-path>\n");
+        }
+    } else if(!strcmp(arr_cmd[0], CMD_LIST)) {
+        if(arr_cmd_len == 2) {
+            ftpc_list(arr_cmd[1]);
+        } else {
+            ftpc_list(NULL);
+        }
+    } else if(!strcmp(arr_cmd[0], CMD_CWD)) {
+        if(arr_cmd_len == 2) {
+            ftpc_cwd(arr_cmd[1]);
+        } else {
+            printf("| Argument not valid\n| CWD <path>\n");
+        }
+    } else if(!strcmp(arr_cmd[0], CMD_CD)) {
+        if(arr_cmd_len == 2) {
+            ftpc_cd(arr_cmd[1]);
+        } else {
+            printf("| Argument not valid\n| CD <path>\n");
+        }
+    } else if(!strcmp(arr_cmd[0], CMD_SHUTDOWN)) {
+        if(fc.connect_status == CONNECTED) {
+            ftpc_quit();
+        }
+        *loop_status = 0;
+    } else {
+        printf("| Command undefined..\n");
+    }
+    free(arr_cmd);
 }
 
 int ftp_client_main(int argc, char** argv) {
@@ -170,7 +240,7 @@ int ftp_client_main(int argc, char** argv) {
 
     int st = 1;
     while(st) {
-        printf("\nftp>>");
+        printf("\nftp>> ");
         ftp_gets(cmd);
         ftpc_parse_command(cmd, &st);
     }

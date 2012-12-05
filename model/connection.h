@@ -44,6 +44,12 @@ char* ftp_getcwd(int argc, char **argv);
  * Membaca string hingga end of line dari stdin
  */
 char* ftp_gets(char *s);
+/**
+ * Membagi string str menjadi bagian-bagian berdasarkan tok
+ */
 int ftp_tokenizer(char* str, char*** arr_token, char tok, int max_arr_token);
+int ftp_file_exist(char *path, char *errmsg);
+void ftp_read_send_file_chunked(char *path, int socket_fd);
+void ftp_get_filename_from_path(char *path, char *filename);
 
 #endif /* CONNECTION_H_ */

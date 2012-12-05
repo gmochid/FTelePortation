@@ -5,14 +5,17 @@
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
 ../funcClient.c \
+../funcServer.c \
 ../main.c 
 
 OBJS += \
 ./funcClient.o \
+./funcServer.o \
 ./main.o 
 
 C_DEPS += \
 ./funcClient.d \
+./funcServer.d \
 ./main.d 
 
 
