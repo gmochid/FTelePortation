@@ -72,29 +72,65 @@ static void ftps_accept() {
 
 static int ftps_retrieve(char *path) {
     char err[MEDIUMBUFFSIZE];
-    char msg[STDBUFFSIZE];
+    char msg[SMALLBUFFSIZE];
 
     printf("Retrieve file : %s (%d)\n", path, connection_id);
 
     if(ftp_file_exist(path, err) == -1) {
-        printf("-- FAILED\n");
-        sprintf(msg, SR501, " [%s]", err);
-        send(fs.accsocket_fd, msg, sizeof(msg), 0);
+        printf("-- FAILED [%s]\n", err);
+        sprintf(msg, "%s", SR501);
+        send(fs.accsocket_fd, msg, SMALLBUFFSIZE, 0);
         return ST_ERROR;
     }
 
     strcpy(msg, SR150);
-    send(fs.accsocket_fd, msg, sizeof(msg), 0);
+    send(fs.accsocket_fd, msg, SMALLBUFFSIZE, 0);
 
-    printf("-- File transfer STARTED\n");
-    ftp_read_send_file_chunked(path, fs.accsocket_fd);
-    printf("-- File transfer FINISHED\n");
+    int last_byte = recv(fs.accsocket_fd, msg, SMALLBUFFSIZE, 0);
+    msg[last_byte] = '\0';
 
-    return 0;
+    if(!strcmp(msg, "READY")) {
+        printf("-- Client ready to receive file\n");
+
+        strcpy(msg, SR250);
+        send(fs.accsocket_fd, msg, SMALLBUFFSIZE, 0);
+
+        printf("-- File transfer STARTED\n");
+        ftp_send_file_partitioned(path, fs.accsocket_fd);
+        printf("-- File transfer FINISHED\n");
+
+        strcpy(msg, SR250);
+        send(fs.accsocket_fd, msg, SMALLBUFFSIZE, 0);
+    }
+
+    return ST_RETR;
 }
 static int ftps_store(char *filename) {
-    /* TODO */
-    return 0;
+    char message[STDBUFFSIZE];
+
+    printf("Store file : %s (%d)\n", filename, connection_id);
+
+    strcpy(message, SR150);
+    send(fs.accsocket_fd, message, SMALLBUFFSIZE, 0);
+
+    int last_byte = recv(fs.accsocket_fd, message, SMALLBUFFSIZE, 0);
+    message[last_byte] = '\0';
+
+    if(!strcmp(message, "READY")) {
+        printf("-- Client ready to send file\n");
+
+        strcpy(message, SR250);
+        send(fs.accsocket_fd, message, SMALLBUFFSIZE, 0);
+
+        printf("-- File transfer STARTED\n");
+        ftp_retrieve_file_partitioned(filename, fs.accsocket_fd);
+        printf("-- File transfer END\n");
+
+        strcpy(message, SR250);
+        send(fs.accsocket_fd, message, SMALLBUFFSIZE, 0);
+    }
+
+    return ST_STOR;
 }
 
 static int ftps_quit(const char *client_addr) {
@@ -120,28 +156,33 @@ static int ftps_list(char *path) {
     n = scandir(path, &list, NULL, alphasort);
 
     if(n < 0) {
-        printf("-- FAILED");
+        printf("-- FAILED\n");
         strcpy(msg, SR501);
-        send(fs.accsocket_fd, msg, sizeof(msg), 0);
+        send(fs.accsocket_fd, msg, SMALLBUFFSIZE, 0);
         return ST_ERROR;
     }
-    printf("-- SUCCESS");
+    printf("-- SUCCESS\n");
     strcpy(msg, SR150);
-    send(fs.accsocket_fd, msg, sizeof(msg), 0);
+    send(fs.accsocket_fd, msg, SMALLBUFFSIZE, 0);
+
+    memset(&msg, 0, BIGBUFFSIZE);
 
     sprintf(msg, "CWD: %s\n", getcwd(NULL, STDBUFFSIZE));
-    sprintf(msg, "PATH: %s\n", path);
+    sprintf(msg, "%sPATH: %s\n", msg, path);
+
     for(i = 0; i < n; i++) {
         if(list[i]->d_type == DT_DIR) {
-            sprintf(msg, "%s (dir)\n", list[i]->d_name);
+            sprintf(msg, "%s%s (dir)\n", msg, list[i]->d_name);
         } else {
-            sprintf(msg, "%s\n", list[i]->d_name);
+            sprintf(msg, "%s%s\n", msg, list[i]->d_name);
         }
         free(list[i]);
     }
     free(list);
 
-    send(fs.accsocket_fd, msg, sizeof(msg), 0);
+    //printf("--%s\n", msg);
+
+    send(fs.accsocket_fd, msg, BIGBUFFSIZE-1, 0);
 
     return ST_LIST;
 }
@@ -191,7 +232,7 @@ static void ftps_handle_conn(const char *client_addr) {
     int last_byte;
 
     sprintf(msg, SR200, "| [Server connected to %s]\n", client_addr);
-    send(fs.socket_fd, msg, sizeof(msg), 0);
+    send(fs.accsocket_fd, msg, sizeof(msg), 0);
 
     while(loop) {
         last_byte = recv(fs.accsocket_fd, client_msg, STDBUFFSIZE, 0);

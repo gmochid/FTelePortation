@@ -77,8 +77,67 @@ int ftp_file_exist(char *path, char *errmsg) {
     return 0;
 }
 
-void ftp_read_send_file_chunked(char *path, int socket_fd) {
-    /* TODO */
+void ftp_send_file_partitioned(char *path, int socket_fd) {
+    char msg[MEDIUMBUFFSIZE];
+    char buffer[MEDIUMBUFFSIZE];
+    char size_msg[MEDIUMBUFFSIZE];
+    FILE *file;
+
+    file = fopen(path, "rb");
+    fseek(file, 0, SEEK_END);
+    int size = ftell(file);
+
+    sprintf(size_msg, "%d", size);
+    send(socket_fd, size_msg, sizeof(size_msg), 0);
+    printf("|| SEND file %d bytes\n", size);
+
+    int last_byte = recv(socket_fd, msg, SMALLBUFFSIZE, 0);
+    msg[last_byte] = '\0';
+
+    int iterator = 0;
+    while(iterator <= size - FILEBUFFSIZE) {
+        fseek(file, iterator, SEEK_SET);
+        fread(buffer, FILEBUFFSIZE, 1, file);
+        send(socket_fd, buffer, sizeof(buffer), 0);
+        iterator += FILEBUFFSIZE;
+    }
+    if(iterator < size) {
+        fseek(file, iterator, SEEK_SET);
+        fread(buffer, size - iterator, 1, file);
+        send(socket_fd, buffer, sizeof(buffer), 0);
+    }
+    fclose(file);
+    printf("|| File has been sent successfully\n");
+}
+
+void ftp_retrieve_file_partitioned(char *filename, int socket_fd) {
+    char msg[MEDIUMBUFFSIZE];
+    char buffer[MEDIUMBUFFSIZE];
+    char size_msg[MEDIUMBUFFSIZE];
+    int size;
+    FILE *file;
+
+    int last_byte = recv(socket_fd, msg, MEDIUMBUFFSIZE, 0);
+    msg[last_byte] = '\0';
+    sscanf(msg, "%d", &size);
+    printf("|| RECEIVING file %d bytes\n", size);
+
+    send(socket_fd, "RETR", SMALLBUFFSIZE, 0);
+
+    file = fopen(filename, "wb+");
+
+    int iterator = 0;
+    while(iterator <= size - FILEBUFFSIZE) {
+        recv(socket_fd, buffer, FILEBUFFSIZE, 0);
+        fwrite(buffer, sizeof(buffer), 1, file);
+        iterator += FILEBUFFSIZE;
+    }
+    if(iterator < size) {
+        recv(socket_fd, buffer, iterator - size, 0);
+        fwrite(buffer, iterator - size, 1, file);
+    }
+
+    fclose(file);
 }
 
 void ftp_get_filename_from_path(char *path, char *filename) {

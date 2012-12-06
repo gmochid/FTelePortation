@@ -15,6 +15,7 @@
 static struct ftp_server fs;
 static int connection_id;
 
+/*-------------------------------------------------*/
 static void init_fs();
 static void ftps_listen();
 static void ftps_accept();
@@ -25,7 +26,7 @@ static int ftps_store(char *filename);
 static int ftps_quit(const char *client_addr);
 static int ftps_list(char *path);
 static int ftps_cwd(char *path);
-
+/*-------------------------------------------------*/
 static void ftps_parse_msg(char *client_msg, const char *client_addr, int *loop_status);
 int ftps_server_main(int argc, char **argv);
 

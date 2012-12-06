@@ -36,8 +36,8 @@ static int ftpc_connect(char *srv_addr) {
     }
 
     //mengambil IP address dari tujuan
-    fc.srv_ipaddr = inet_ntoa((*(struct sockaddr_in*)fc.srv_info->ai_addr).sin_addr);
-    printf("| Connecting to %s ...", fc.srv_ipaddr);
+    fc.srv_ipaddr = inet_ntoa((*(struct sockaddr_in*) fc.srv_info->ai_addr).sin_addr);
+    printf("| Connecting to %s ...\n", fc.srv_ipaddr);
 
     freeaddrinfo(fc.srv_info);
 
@@ -76,16 +76,73 @@ static int ftpc_retrieve(char *path) {
         printf("| ERROR! No active CONNECTION\n");
         return ST_ERROR;
     }
-    /* TODO */
+
+    char filename[MEDIUMBUFFSIZE];
+    char result[STDBUFFSIZE];
+    char message[STDBUFFSIZE];
+
+    sprintf(message, "%s %s", CMD_RETR, path);
+    ftpc_sendsrvmsg(message, STDBUFFSIZE, result, STDBUFFSIZE);
+    result[3] = '\0';
+    printf("|| Message from server : %s\n", result);
+
+    if(!strcmp(result, SR150)) {
+        ftp_get_filename_from_path(path, filename);
+        send(fc.socket_fd, "READY", SMALLBUFFSIZE, 0);
+
+        recv(fc.socket_fd, message, SMALLBUFFSIZE, 0);
+        printf("|| Message from server : %s\n", result);
+
+        printf("| Begin retrieving file ..\n");
+        ftp_retrieve_file_partitioned(filename, fc.socket_fd);
+        printf("| End retrieving file ..\n");
+
+        recv(fc.socket_fd, message, SMALLBUFFSIZE, 0);
+        printf("|| Message from server : %s\n", result);
+    }
+
     return ST_RETR;
 }
 
 static int ftpc_store(char *path) {
+    char filename[MEDIUMBUFFSIZE];
+    char result[STDBUFFSIZE];
+    char message[STDBUFFSIZE];
+    char err_msg[STDBUFFSIZE];
+    char tmp[STDBUFFSIZE];
+
     if(fc.connect_status == DISCONNECTED) {
         printf("| ERROR! No active CONNECTION\n");
         return ST_ERROR;
     }
-    /* TODO */
+
+    if(ftp_file_exist(path, err_msg) == -1) {
+        printf("| ERROR! %s\n", err_msg);
+        return ST_ERROR;
+    }
+
+    strcpy(tmp, path);
+    ftp_get_filename_from_path(path, tmp);
+
+    memset(&message, 0, sizeof(message));
+    sprintf(message, "%s %s", CMD_STOR, tmp);
+    ftpc_sendsrvmsg(message, STDBUFFSIZE, result, STDBUFFSIZE);
+    printf("|| Message from server : %s\n", result);
+
+    if(!strcmp(result, SR150)) {
+        send(fc.socket_fd, "READY", SMALLBUFFSIZE, 0);
+
+        recv(fc.socket_fd, message, SMALLBUFFSIZE, 0);
+        printf("|| Message from server : %s\n", result);
+
+        printf("| Begin sending file ..\n");
+        ftp_send_file_partitioned(path, fc.socket_fd);
+        printf("| End sending file ..\n");
+
+        recv(fc.socket_fd, message, SMALLBUFFSIZE, 0);
+        printf("|| Message from server : %s\n", result);
+    }
+
     return ST_STOR;
 }
 
@@ -116,21 +173,23 @@ static int ftpc_list(char *path) {
     char res[BIGBUFFSIZE];
     int last_byte;
 
-    memset(&msg, 0, sizeof(msg));
+    memset(&msg, 0, STDBUFFSIZE);
     if(path != NULL) {
-        sprintf(msg, CMD_LIST, " %s", path);
+        sprintf(msg, "%s %s", CMD_LIST, path);
     } else {
         sprintf(msg, CMD_LIST);
     }
 
-    ftpc_sendsrvmsg(msg, strlen(msg), res, SMALLBUFFSIZE);
+    ftpc_sendsrvmsg(msg, SMALLBUFFSIZE, res, SMALLBUFFSIZE);
     printf("|| Message from server : %s\n", res);
     res[3] = '\0';
 
     if(!strcmp(res, SR150)) {
-        last_byte = recv(fc.socket_fd, res, sizeof(res), 0);
+        memset(&res, 0, BIGBUFFSIZE);
+        last_byte = recv(fc.socket_fd, res, BIGBUFFSIZE, 0);
         res[last_byte] = '\0';
         printf("%s\n", res);
+
     } else {
         printf("| ERROR while listing content on server\n");
     }
@@ -158,7 +217,7 @@ static int ftpc_cwd(char* path) {
     char res[STDBUFFSIZE];
 
     memset(&msg, 0, sizeof(msg));
-    sprintf(msg, CMD_CWD, " %s", path);
+    sprintf(msg, "%s %s", CMD_CWD, path);
 
     ftpc_sendsrvmsg(msg, sizeof(msg), res, sizeof(res));
     printf("|| Message from server : %s\n", res);

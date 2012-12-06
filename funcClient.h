@@ -14,6 +14,7 @@
 
 static struct ftp_client fc;
 
+/*-------------------------------------------------*/
 static void init_fc(); // DONE
 static int ftpc_connect(char *srv_addr); // DONE
 static int ftpc_sendsrvmsg(const char *msg, // DONE
@@ -25,6 +26,7 @@ static int ftpc_quit(); // DONE
 static int ftpc_list(char *path); // DONE
 static int ftpc_cwd(char *path); // DONE
 static int ftpc_cd(char *path); // DONE
+/*-------------------------------------------------*/
 
 static void ftpc_parse_command(char *command, int *loop_status); // DONE
 int ftp_client_main(int argc, char** argv); // DONE
