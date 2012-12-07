@@ -182,7 +182,7 @@ static int ftps_list(char *path) {
 
     //printf("--%s\n", msg);
 
-    send(fs.accsocket_fd, msg, BIGBUFFSIZE-1, 0);
+    send(fs.accsocket_fd, msg, BIGBUFFSIZE, 0);
 
     return ST_LIST;
 }
@@ -196,11 +196,11 @@ static int ftps_cwd(char *path) {
         strcpy(msg, SR501);
         printf("-- FAILED\n");
     } else {
-        strcpy(msg, SR501);
+        strcpy(msg, SR200);
         printf("-- SUCCESS\n");
     }
 
-    send(fs.accsocket_fd, msg, strlen(msg), 0);
+    send(fs.accsocket_fd, msg, STDBUFFSIZE, 0);
     return ST_CWD;
 }
 
@@ -239,6 +239,7 @@ static void ftps_handle_conn(const char *client_addr) {
         client_msg[last_byte] = '\0';
 
         ftps_parse_msg(client_msg, client_addr, &loop);
+        printf("\n");
     }
 }
 

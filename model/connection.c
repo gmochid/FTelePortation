@@ -78,8 +78,8 @@ int ftp_file_exist(char *path, char *errmsg) {
 }
 
 void ftp_send_file_partitioned(char *path, int socket_fd) {
-    char msg[MEDIUMBUFFSIZE];
-    char buffer[MEDIUMBUFFSIZE];
+    char msg[SMALLBUFFSIZE];
+    char buffer[FILEBUFFSIZE];
     char size_msg[MEDIUMBUFFSIZE];
     FILE *file;
 
@@ -88,7 +88,7 @@ void ftp_send_file_partitioned(char *path, int socket_fd) {
     int size = ftell(file);
 
     sprintf(size_msg, "%d", size);
-    send(socket_fd, size_msg, sizeof(size_msg), 0);
+    send(socket_fd, size_msg, strlen(size_msg), 0);
     printf("|| SEND file %d bytes\n", size);
 
     int last_byte = recv(socket_fd, msg, SMALLBUFFSIZE, 0);
@@ -98,22 +98,19 @@ void ftp_send_file_partitioned(char *path, int socket_fd) {
     while(iterator <= size - FILEBUFFSIZE) {
         fseek(file, iterator, SEEK_SET);
         fread(buffer, FILEBUFFSIZE, 1, file);
-        send(socket_fd, buffer, sizeof(buffer), 0);
+        send(socket_fd, buffer, FILEBUFFSIZE, 0);
         iterator += FILEBUFFSIZE;
     }
-    if(iterator < size) {
-        fseek(file, iterator, SEEK_SET);
-        fread(buffer, size - iterator, 1, file);
-        send(socket_fd, buffer, sizeof(buffer), 0);
-    }
+    fseek(file, iterator, SEEK_SET);
+    fread(buffer, size - iterator, 1, file);
+    send(socket_fd, buffer, size - iterator, 0);
     fclose(file);
     printf("|| File has been sent successfully\n");
 }
 
 void ftp_retrieve_file_partitioned(char *filename, int socket_fd) {
     char msg[MEDIUMBUFFSIZE];
-    char buffer[MEDIUMBUFFSIZE];
-    char size_msg[MEDIUMBUFFSIZE];
+    char buffer[FILEBUFFSIZE];
     int size;
     FILE *file;
 
@@ -129,13 +126,11 @@ void ftp_retrieve_file_partitioned(char *filename, int socket_fd) {
     int iterator = 0;
     while(iterator <= size - FILEBUFFSIZE) {
         recv(socket_fd, buffer, FILEBUFFSIZE, 0);
-        fwrite(buffer, sizeof(buffer), 1, file);
+        fwrite(buffer, FILEBUFFSIZE, 1, file);
         iterator += FILEBUFFSIZE;
     }
-    if(iterator < size) {
-        recv(socket_fd, buffer, iterator - size, 0);
-        fwrite(buffer, iterator - size, 1, file);
-    }
+    recv(socket_fd, buffer, size - iterator, 0);
+    fwrite(buffer, size - iterator, 1, file);
 
     fclose(file);
 }

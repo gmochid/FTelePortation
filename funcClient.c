@@ -77,7 +77,7 @@ static int ftpc_retrieve(char *path) {
         return ST_ERROR;
     }
 
-    char filename[MEDIUMBUFFSIZE];
+    char filename[STDBUFFSIZE];
     char result[STDBUFFSIZE];
     char message[STDBUFFSIZE];
 
@@ -105,7 +105,6 @@ static int ftpc_retrieve(char *path) {
 }
 
 static int ftpc_store(char *path) {
-    char filename[MEDIUMBUFFSIZE];
     char result[STDBUFFSIZE];
     char message[STDBUFFSIZE];
     char err_msg[STDBUFFSIZE];
@@ -172,6 +171,11 @@ static int ftpc_list(char *path) {
     char msg[STDBUFFSIZE];
     char res[BIGBUFFSIZE];
     int last_byte;
+
+    if(fc.connect_status == DISCONNECTED) {
+        printf("| ERROR! No active CONNECTION\n");
+        return ST_ERROR;
+    }
 
     memset(&msg, 0, STDBUFFSIZE);
     if(path != NULL) {
@@ -288,7 +292,7 @@ static void ftpc_parse_command(char *command, int *loop_status) {
     free(arr_cmd);
 }
 
-int ftp_client_main(int argc, char** argv) {
+int ftpc_client_main(int argc, char** argv) {
     char cmd[INPUTBUFFSIZE];
     strcpy(fc.cwd, ftp_getcwd(argc, argv));
 

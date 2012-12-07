@@ -29,6 +29,6 @@ static int ftpc_cd(char *path); // DONE
 /*-------------------------------------------------*/
 
 static void ftpc_parse_command(char *command, int *loop_status); // DONE
-int ftp_client_main(int argc, char** argv); // DONE
+int ftpc_client_main(int argc, char** argv); // DONE
 
 #endif /* FUNCCLIENT_H_ */

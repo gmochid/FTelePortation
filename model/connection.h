@@ -22,12 +22,12 @@
 #include <signal.h>
 #include <dirent.h>
 
-#define BIGBUFFSIZE (1 << 15)
+#define BIGBUFFSIZE (1 << 14)
 #define STDBUFFSIZE (1 << 8)
 #define INPUTBUFFSIZE (1 << 8)
 #define MEDIUMBUFFSIZE (1 << 7)
 #define SMALLBUFFSIZE (1 << 5)
-#define FILEBUFFSIZE (1 << 15)
+#define FILEBUFFSIZE (1 << 14)
 
 #define BACKLOG 10
 

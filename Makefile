@@ -1,9 +1,7 @@
 all:
-	gcc -o main main.c funcClient.c funcServer.c model/connection.c
+	gcc -o mainClient mainClient.c funcClient.c funcServer.c model/connection.c
+	gcc -o mainServer mainServer.c funcClient.c funcServer.c model/connection.c
 client:
-	./main
+	./mainClient
 server:
-	./main --server
-clean:
-	rm main
-	
+	./mainServer
